@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block body %}
+<style>
+  /* Container de sucesso */
+body {
+  background-color: #2B2B2B;
+}
+.success-container {
+    text-align: center;
+    padding: 20px 30px;
+    background-color: #2b2b2b;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    color: #f5f5f5;
+    width: 100%;
+    max-width: 400px;
+    margin: 50px auto;
+}
+
+/* Cabeçalho */
+.success-container h1 {
+    color: #ff4d4d;
+    margin-bottom: 20px;
+    font-size: 1.8em;
+}
+
+/* Parágrafo */
+.success-container p {
+    font-size: 1.2em;
+    margin-bottom: 20px;
+    color: #ddd;
+}
+
+/* Botão */
+.success-container .button {
+    display: inline-block;
+    background-color: #ff4d4d;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 1em;
+    transition: background-color 0.3s;
+}
+
+.success-container .button:hover {
+    background-color: #e03b3b;
+}
+</style>
+
+<div class="success-container">
+  <h1>Registro Bem-Sucedido!</h1>
+  <p>Seu registro foi realizado com sucesso.</p>
+  <a href="/" class="button">Voltar à Página Inicial</a>
+</div>
+{% endblock %}
