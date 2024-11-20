@@ -1,12 +1,29 @@
+from datetime import datetime, timedelta, timezone
 import jwt
 import os
 
 JWT_SECRET = os.getenv('JWT_SECRET')
-PUBLIC_KEY = "nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwhvqCC+37A+UXgcvDl+7\nnbVjDI3QErdZBkI1VypVBMkKKWHMNLMdHk0bIKL+1aDYTRRsCKBy9ZmSSX1pwQlO\n/3+gRs/MWG27gdRNtf57uLk1+lQI6hBDozuyBR0YayQDIx6VsmpBn3Y8LS13p4pT\nBvirlsdX+jXrbOEaQphn0OdQo0WDoOwwsPCNCKoIMbUOtUCowvjesFXlWkwG1zeM\nzlD1aDDS478PDZdckPjT96ICzqe4O1Ok6fRGnor2UTmuPy0f1tI0F7Ol5DHAD6pZ\nbkhB70aTBuWDGLDR0iLenzyQecmD4aU19r1XC9AHsVbQzxHrP8FveZGlV/nJOBJw\nFwIDAQAB"
 
 def create_jwt_token(user):
-  return jwt.encode(user.to_json(), JWT_SECRET, algorithm="HS256")
+  user_data = user.to_json()
+  payload = {
+    "sub": str(user_data["id"]),
+    "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+    "iat": datetime.now(timezone.utc),
+    "username": user_data["username"],
+    "email": user_data["email"],
+    "status": user_data["status"],
+    "createdAt": user_data["createdAt"],
+  }
+  print(datetime.now(timezone.utc) + timedelta(hours=1))
+  return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
-def validate_jwt(request):
-  header = request.headers._get_key("Authorization")
-  jwt.decode()
+def validate_jwt(auth_header):
+  header = auth_header.replace("Bearer ", "")
+  try:
+    token = jwt.decode(header, JWT_SECRET, algorithms="HS256")
+    print("token decoded")
+    return True, token
+  except Exception as e:
+    print("token not decoded", e)
+    return False, "false"
