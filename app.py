@@ -2,12 +2,15 @@
 from http import HTTPStatus
 from flask import Flask, render_template, request, jsonify
 from app.controller import users
+from app.controller import auth
 from app.commons.jwt import validate_jwt
 from app.commons.constants import PUBLIC_ROUTES
 
 app = Flask(__name__)
 
 app.register_blueprint(users.blueprint)
+app.register_blueprint(auth.blueprint)
+
 @app.route('/')
 def home():
     return render_template('home.html')

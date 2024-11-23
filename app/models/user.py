@@ -1,8 +1,9 @@
-from sqlalchemy import Column, String, Integer, Boolean
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, func
 from app.commons.config import Base, session_factory
 from app.commons.hash import hash
 from app.commons.jwt import create_jwt_token
 import datetime
+from http import HTTPStatus
 
 
 class User(Base):
@@ -11,6 +12,7 @@ class User(Base):
     username = Column('username', String(256), unique=True)
     email = Column('email', String(256), unique=True)
     password = Column('password', String(256))
+    createdAt = Column('createdAt', DateTime(timezone=True), default=func.now(), nullable=False)
     status = Column('status', Boolean)
 
     def __init__(self, username, email, password, status=True):
@@ -25,7 +27,7 @@ class User(Base):
             'id': self.id,
             'username': self.username,
             'email': self.email,
-            'createdAt': str(datetime.date.today()),
+            'createdAt': self.createdAt.isoformat(),
             'status': self.status,
         }
     
@@ -82,18 +84,21 @@ def register_user(request):
     username = user_data.get("username")
     email = user_data.get("email")
     password = hash(user_data.get("password"))
+
     try:
         user = User(username, email, password)
         session.add(user)
         session.commit()
         return True, user.to_json()
+    
     except Exception as e:
         print('Error', e)
         return False, e
+    
     finally:
         session.close()
 
-def login_user(request):
+def auth_user(request):
     session = session_factory()
     user_data = request.get_json()
     email = user_data.get("email")
@@ -112,5 +117,25 @@ def login_user(request):
     except Exception as e:
         print('Error', e)
         return False, e
+    
+    finally:
+        session.close()
+
+def delete_user(id):
+    session = session_factory()
+    try:
+        user_orm : User = session.query(User).filter_by(id=id).first()
+        if not user_orm:
+            return {"error": "User not found"}, HTTPStatus.NOT_FOUND
+        
+        session.delete(user_orm)
+        session.commit()
+        return '', HTTPStatus.NO_CONTENT
+    
+    except Exception as e:
+        print('Error deleting user:', e)
+        session.rollback()
+        return {"error": "Internal server error"}, HTTPStatus.INTERNAL_SERVER_ERROR
+    
     finally:
         session.close()
