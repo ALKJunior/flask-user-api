@@ -126,16 +126,42 @@ def delete_user(id):
     try:
         user_orm : User = session.query(User).filter_by(id=id).first()
         if not user_orm:
-            return {"error": "User not found"}, HTTPStatus.NOT_FOUND
+            return False, {"error": "User not found"}
         
         session.delete(user_orm)
         session.commit()
-        return '', HTTPStatus.NO_CONTENT
+
+        return True, ''
     
     except Exception as e:
         print('Error deleting user:', e)
         session.rollback()
-        return {"error": "Internal server error"}, HTTPStatus.INTERNAL_SERVER_ERROR
+        return False, {"error": "Internal server error"}
     
+    finally:
+        session.close()
+
+def update_user(id, request):
+    session = session_factory()
+    try:
+        user_orm : User = session.query(User).filter_by(id).first()
+
+        if not user_orm:
+            return False, {"error": "User not found"}
+        
+        if request.username:
+            user_orm.username = request.username
+        if request.email:
+            user_orm.email = request.email
+        if request.password:
+            user_orm = request.password
+            
+        session.commit()
+        return True, user_orm.to_json()
+
+    except Exception as e:
+        print('Error', e)
+        return False, {'error': e}
+
     finally:
         session.close()
