@@ -1,9 +1,13 @@
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, func
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, func, Enum as SQLEnum
 from app.commons.config import Base, session_factory
 from app.commons.hash import hash
-from app.commons.jwt import create_jwt_token
-import datetime
-from http import HTTPStatus
+from app.commons.jwt import create_jwt_token, validate_jwt
+from enum import Enum
+
+class UserRole(Enum):
+    USER="User"
+    ADMIN="Administrator"
+
 
 
 class User(Base):
@@ -13,6 +17,7 @@ class User(Base):
     email = Column('email', String(256), unique=True)
     password = Column('password', String(256))
     createdAt = Column('createdAt', DateTime(timezone=True), default=func.now(), nullable=False)
+    role = Column('role', SQLEnum(UserRole), nullable=False)
     status = Column('status', Boolean)
 
     def __init__(self, username, email, password, status=True):
@@ -20,6 +25,7 @@ class User(Base):
         self.email = email
         self.password = password
         self.status = status
+        self.role = UserRole.USER
     
 
     def to_json(self):
@@ -29,19 +35,23 @@ class User(Base):
             'email': self.email,
             'createdAt': self.createdAt.isoformat(),
             'status': self.status,
+            'role': self.role.value
         }
     
 
 def get_all_users():
     session = session_factory() # Instancio uma sessao nova com o banco de dados
     try:
-        user_orm: User = session.query(User) # Uso a sessao criada anteriormente para realizar operações
-        return {
-            'items': [user.to_json() for user in user_orm]
-        }
+        user_orm: User = session.query(User).all() # Uso a sessao criada anteriormente para realizar operações
+        if user_orm :
+            return True, { 'items': [user.to_json() for user in user_orm] }
+        else:
+            return False, {'message': 'no user found'}
+        
     except Exception as e:
         print('Error', e)
         return {'error': e}
+    
     finally:
         session.close()
 
@@ -51,13 +61,13 @@ def get_user_with_id(id):
     try:
         user_orm : User = session.query(User).filter_by(id=id).first()
         if user_orm :
-            return {"item": user_orm.to_json()}
+            return True, user_orm.to_json()
         else: 
-            return {"message": "User not found"}
+            return False, {"message": "User not found"}
         
     except Exception as e:
         print('Error', e)
-        return {'error': e}
+        return False, {'error': e}
 
     finally:
         session.close()
@@ -67,19 +77,21 @@ def get_user_with_email(email):
     try:
         user_orm : User = session.query(User).filter_by(email=email).first()
         if user_orm :
-            return {"item": user_orm.to_json()}
+            return user_orm.to_json()
         else: 
             return {"message": "User not found"}
         
     except Exception as e:
         print('Error', e)
-        return {'error': e}
+        return {'error': f'{e}'}
+    
     finally:
         session.close()
 
 
 def register_user(request):
     session = session_factory()
+
     user_data = request.get_json()
     username = user_data.get("username")
     email = user_data.get("email")
@@ -93,7 +105,8 @@ def register_user(request):
     
     except Exception as e:
         print('Error', e)
-        return False, e
+        session.rollback()
+        return False, {"error": e}
     
     finally:
         session.close()
@@ -116,27 +129,24 @@ def auth_user(request):
 
     except Exception as e:
         print('Error', e)
-        return False, e
+        return False, {"error": e}
     
     finally:
         session.close()
 
 def delete_user(id):
     session = session_factory()
+    
     try:
         user_orm : User = session.query(User).filter_by(id=id).first()
-        if not user_orm:
-            return False, {"error": "User not found"}
-        
         session.delete(user_orm)
         session.commit()
-
         return True, ''
     
     except Exception as e:
         print('Error deleting user:', e)
         session.rollback()
-        return False, {"error": "Internal server error"}
+        return False, {"error": e}
     
     finally:
         session.close()
@@ -144,23 +154,21 @@ def delete_user(id):
 def update_user(id, request):
     session = session_factory()
     try:
-        user_orm : User = session.query(User).filter_by(id).first()
+        user_orm : User = session.query(User).filter_by(id=id).first()
 
-        if not user_orm:
-            return False, {"error": "User not found"}
-        
         if request.username:
             user_orm.username = request.username
         if request.email:
             user_orm.email = request.email
         if request.password:
             user_orm = request.password
-            
+
         session.commit()
         return True, user_orm.to_json()
 
     except Exception as e:
         print('Error', e)
+        session.rollback()
         return False, {'error': e}
 
     finally:
