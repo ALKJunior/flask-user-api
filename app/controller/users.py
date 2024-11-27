@@ -24,7 +24,7 @@ def user_with_id(id):
     if request.method == 'DELETE':
         auth_header = request.headers.get("Authorization")
         sucess, user = validate_jwt(auth_header)
-        print("Essa role e ",user["role"])
+
         if user.get("role") != "Administrator":   
             if not user["sub"] == str(id):
                 return jsonify(), HTTPStatus.FORBIDDEN
@@ -36,7 +36,14 @@ def user_with_id(id):
             return jsonify(result), HTTPStatus.INTERNAL_SERVER_ERROR
         
     if request.method == 'PATCH':
-        sucess, result = update_user()
+        auth_header = request.headers.get("Authorization")
+        sucess, user = validate_jwt(auth_header)
+        
+        if user.get("role") != "Administrator":   
+            if not user["sub"] == str(id):
+                return jsonify(), HTTPStatus.FORBIDDEN
+        
+        sucess, result = update_user(id, request)
         if sucess:
             return jsonify(result), HTTPStatus.OK
         else:

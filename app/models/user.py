@@ -156,12 +156,16 @@ def update_user(id, request):
     try:
         user_orm : User = session.query(User).filter_by(id=id).first()
 
-        if request.username:
-            user_orm.username = request.username
-        if request.email:
-            user_orm.email = request.email
-        if request.password:
-            user_orm = request.password
+        username = request.json.get('username')
+        email = request.json.get('email')
+        password = request.json.get('password')
+
+        if username:
+            user_orm.username = username
+        if email:
+            user_orm.email = email
+        if password:
+            user_orm.password = hash(password)
 
         session.commit()
         return True, user_orm.to_json()
